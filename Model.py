@@ -2,6 +2,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.prompts.few_shot import FewShotPromptTemplate
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from langchain.prompts import PromptTemplate
+from langchain.prompts.example_selector import LengthBasedExampleSelector
 
 
 chat = ChatOpenAI(
@@ -46,12 +47,20 @@ examples = [
 ]
 
 example_prompt = PromptTemplate.from_template("Human: {question}\nAI: {answer}")
+example_selector = LengthBasedExampleSelector(
+    examples=examples,
+    example_prompt=example_prompt,
+    max_length=80,
+)
 prompt = FewShotPromptTemplate(
     example_prompt=example_prompt,
-    examples=examples,
+    example_selector=example_selector,
     suffix="Human: What do you know about {country}?",
     input_variables=["country"],
 )
+
+format = prompt.format(country="Korean")
+print(format)
 
 chain = prompt | chat
 
