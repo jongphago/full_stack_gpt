@@ -1,8 +1,23 @@
+from typing import Any, Dict, List
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.few_shot import FewShotPromptTemplate
 from langchain.callbacks import StreamingStdOutCallbackHandler
 from langchain.prompts import PromptTemplate
 from langchain.prompts.example_selector import LengthBasedExampleSelector
+from langchain.prompts.example_selector.base import BaseExampleSelector
+
+
+class RandomExampleSelector(BaseExampleSelector):
+    def __init__(self, examples):
+        self.examples = examples
+
+    def add_example(self, example):
+        self.examples.append(example)
+
+    def select_examples(self, input_variables):
+        from random import choice
+
+        return [choice(self.examples)]
 
 
 chat = ChatOpenAI(
@@ -51,6 +66,9 @@ example_selector = LengthBasedExampleSelector(
     examples=examples,
     example_prompt=example_prompt,
     max_length=80,
+)
+example_selector = RandomExampleSelector(
+    examples=examples,
 )
 prompt = FewShotPromptTemplate(
     example_prompt=example_prompt,
