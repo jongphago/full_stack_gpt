@@ -1,10 +1,5 @@
-from langchain.chat_models import ChatOpenAI
-from langchain.callbacks import get_openai_callback
+from langchain.llms.openai import OpenAI
 
-chat = ChatOpenAI(
-    temperature=0.1,
-)
+chat = OpenAI(temperature=0.1, max_tokens=450, model="gpt-3.5-turbo-16k")
 
-with get_openai_callback() as usage:
-    chat.predict("What is the recipe for soju")
-    print(usage)
+chat.save("model.json")
