@@ -1,17 +1,27 @@
 """
 1. WholeConversationalMemory
+2. ConversationBufferWindowMemory
 """
 
-from langchain.memory import ConversationBufferMemory  # Whole
+from langchain.memory import ConversationBufferWindowMemory  # Whole
 
 
-memory = ConversationBufferMemory(
+memory = ConversationBufferWindowMemory(
     return_messages=True,  # for chat model
+    k=4,
 )
-memory.save_context(
-    {"input": "Hi!"},
-    {"output": "How are you?"},
-)
+
+
+def add_message(input, output):
+    global memory
+    memory.save_context(
+        {"input": input},
+        {"output": output},
+    )
+
+
+for i in range(1, 6):
+    add_message(i, i)
 
 out = memory.load_memory_variables({})
 
