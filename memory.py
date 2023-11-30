@@ -1,14 +1,17 @@
 """
 1. WholeConversationalMemory
 2. ConversationBufferWindowMemory
+3. ConversationSummaryMemory
 """
 
-from langchain.memory import ConversationBufferWindowMemory  # Whole
+from langchain.memory import ConversationSummaryMemory  # Whole
+from langchain.chat_models import ChatOpenAI
 
 
-memory = ConversationBufferWindowMemory(
-    return_messages=True,  # for chat model
-    k=4,
+llm = ChatOpenAI(temperature=0.1)
+
+memory = ConversationSummaryMemory(
+    llm=llm,
 )
 
 
@@ -20,9 +23,22 @@ def add_message(input, output):
     )
 
 
-for i in range(1, 6):
-    add_message(i, i)
+def get_history():
+    out = memory.load_memory_variables({})
+    return out
 
-out = memory.load_memory_variables({})
 
-print(out)
+add_message(
+    "Hi I'm Jonghyun, I live in South Korea",
+    "Wow that is so cool!",
+)
+
+add_message(
+    "South Korea is so pretty",
+    "I wish I could go!!!",
+)
+
+
+history = get_history()
+
+print(history)
