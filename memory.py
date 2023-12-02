@@ -2,16 +2,19 @@
 1. WholeConversationalMemory
 2. ConversationBufferWindowMemory
 3. ConversationSummaryMemory
+4. ConversationSummaryBufferMemory
 """
 
-from langchain.memory import ConversationSummaryMemory  # Whole
+from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chat_models import ChatOpenAI
 
 
 llm = ChatOpenAI(temperature=0.1)
 
-memory = ConversationSummaryMemory(
+memory = ConversationSummaryBufferMemory(
     llm=llm,
+    max_token_limit=50,
+    return_messages=True,
 )
 
 
