@@ -6,15 +6,24 @@
 5. ConversationKGMemory
 """
 
-from langchain.memory import ConversationKGMemory
+from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationSummaryBufferMemory
 
 
 llm = ChatOpenAI(temperature=0.1)
 
-memory = ConversationKGMemory(
+memory = ConversationSummaryBufferMemory(
     llm=llm,
-    return_messages=True,
+    max_token_limit=80,
+)
+
+chain = LLMChain(
+    llm=llm,
+    memory=memory,
+    prompt=PromptTemplate.from_template("{question}"),
+    verbose=True,
 )
 
 
@@ -26,22 +35,12 @@ def add_message(input, output):
     )
 
 
-def get_history(input):
-    out = memory.load_memory_variables({"input": input})
-    return out
-
-
-add_message(
-    "Hi I'm Jonghyun, I live in South Korea",
-    "Wow that is so cool!",
+history = chain.predict(
+    question="Hi I'm Jonghyun, I live in South Korea",
 )
-
-add_message(
-    "South Korea is so pretty",
-    "I wish I could go!!!",
-)
-
-
-history = get_history("Who is Jonghyun")
-
 print(history)
+
+out = chain.predict(
+    question="What is my name?",
+)
+print(out)
