@@ -17,12 +17,21 @@ llm = ChatOpenAI(temperature=0.1)
 memory = ConversationSummaryBufferMemory(
     llm=llm,
     max_token_limit=80,
+    memory_key="chat_history"
 )
+
+template = """
+    You are a helpful AI talking to a human.
+    
+    {chat_history}
+    Human: {question}
+    You: 
+"""
 
 chain = LLMChain(
     llm=llm,
     memory=memory,
-    prompt=PromptTemplate.from_template("{question}"),
+    prompt=PromptTemplate.from_template(template),
     verbose=True,
 )
 
@@ -35,12 +44,15 @@ def add_message(input, output):
     )
 
 
-history = chain.predict(
+chat = chain.predict(
     question="Hi I'm Jonghyun, I live in South Korea",
 )
-print(history)
+print(chat)
 
 out = chain.predict(
     question="What is my name?",
 )
 print(out)
+
+history = memory.load_memory_variables({})
+print(history)
