@@ -3,17 +3,17 @@
 2. ConversationBufferWindowMemory
 3. ConversationSummaryMemory
 4. ConversationSummaryBufferMemory
+5. ConversationKGMemory
 """
 
-from langchain.memory import ConversationSummaryBufferMemory
+from langchain.memory import ConversationKGMemory
 from langchain.chat_models import ChatOpenAI
 
 
 llm = ChatOpenAI(temperature=0.1)
 
-memory = ConversationSummaryBufferMemory(
+memory = ConversationKGMemory(
     llm=llm,
-    max_token_limit=50,
     return_messages=True,
 )
 
@@ -26,8 +26,8 @@ def add_message(input, output):
     )
 
 
-def get_history():
-    out = memory.load_memory_variables({})
+def get_history(input):
+    out = memory.load_memory_variables({"input": input})
     return out
 
 
@@ -42,6 +42,6 @@ add_message(
 )
 
 
-history = get_history()
+history = get_history("Who is Jonghyun")
 
 print(history)
