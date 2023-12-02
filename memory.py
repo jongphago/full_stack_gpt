@@ -8,7 +8,7 @@
 
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationSummaryBufferMemory
 
 
@@ -17,42 +17,31 @@ llm = ChatOpenAI(temperature=0.1)
 memory = ConversationSummaryBufferMemory(
     llm=llm,
     max_token_limit=80,
-    memory_key="chat_history"
+    return_messages=True,
+    memory_key="chat_history",
 )
 
-template = """
-    You are a helpful AI talking to a human.
-    
-    {chat_history}
-    Human: {question}
-    You: 
-"""
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful AI talking to a human."),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{question}"),
+    ]
+)
+
 
 chain = LLMChain(
     llm=llm,
     memory=memory,
-    prompt=PromptTemplate.from_template(template),
+    prompt=prompt,
     verbose=True,
 )
 
-
-def add_message(input, output):
-    global memory
-    memory.save_context(
-        {"input": input},
-        {"output": output},
-    )
-
-
-chat = chain.predict(
-    question="Hi I'm Jonghyun, I live in South Korea",
-)
+chat = chain.predict(question="My name is Jonghyun")
 print(chat)
 
-out = chain.predict(
-    question="What is my name?",
-)
-print(out)
+chat = chain.predict(question="I live in Seoul")
+print(chat)
 
-history = memory.load_memory_variables({})
-print(history)
+out = chain.predict(question="What is my name?")
+print(out)
