@@ -9,6 +9,7 @@
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationSummaryBufferMemory
+from langchain.schema.runnable import RunnablePassthrough
 
 
 llm = ChatOpenAI(temperature=0.1)
@@ -29,11 +30,15 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 
-chain = prompt | llm
+def load_memory(input):
+    print(input)
+    return memory.load_memory_variables({})["chat_history"]
+
+
+chain = RunnablePassthrough.assign(chat_history=load_memory) | prompt | llm
 
 base_message = chain.invoke(
     {
-        "chat_history": memory.load_memory_variables({})["chat_history"],
         "question": "My name is Jonghyun",
     }
 )
