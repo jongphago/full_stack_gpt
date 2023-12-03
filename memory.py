@@ -18,13 +18,12 @@ memory = ConversationSummaryBufferMemory(
     llm=llm,
     max_token_limit=80,
     return_messages=True,
-    memory_key="chat_history",
 )
 
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", "You are a helpful AI talking to a human."),
-        MessagesPlaceholder(variable_name="chat_history"),
+        MessagesPlaceholder(variable_name="history"),
         ("human", "{question}"),
     ]
 )
@@ -32,15 +31,20 @@ prompt = ChatPromptTemplate.from_messages(
 
 def load_memory(input):
     print(input)
-    return memory.load_memory_variables({})["chat_history"]
+    return memory.load_memory_variables({})["history"]
 
 
-chain = RunnablePassthrough.assign(chat_history=load_memory) | prompt | llm
+chain = RunnablePassthrough.assign(history=load_memory) | prompt | llm
 
-base_message = chain.invoke(
-    {
-        "question": "My name is Jonghyun",
-    }
-)
 
-print(base_message)
+def invoke_chain(question):
+    result = chain.invoke({"question": question})
+    memory.save_context(
+        {"input": question},
+        {"output": result.content},
+    )
+    print(result)
+
+
+invoke_chain("My name is Jonghyun")
+invoke_chain("What is my name?")
