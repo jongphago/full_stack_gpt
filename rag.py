@@ -2,11 +2,15 @@ import os
 import logging
 import dotenv
 import pinecone
+from langchain.chains import RetrievalQA
+from langchain.chat_models import ChatOpenAI
 from langchain.storage import LocalFileStore
 from langchain.document_loaders import TextLoader
 from langchain.vectorstores.pinecone import Pinecone
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+
+llm = ChatOpenAI()
 
 logger = logging.getLogger("rag")
 logger.setLevel(logging.DEBUG)
@@ -48,6 +52,14 @@ else:
     info(f"Vectorstore from existing index: {index_name}")
     vectorstore = Pinecone.from_existing_index(index_name, cahced_embeddings)
 
-results = vectorstore.similarity_search("Where does winston live")
 
-print(results)
+chain = RetrievalQA.from_chain_type(
+    llm=llm,
+    chain_type="map_rerank",  # "refine", "map_reduce", "map_rerank"
+    retriever=vectorstore.as_retriever(),  # interface
+)
+
+result = chain.run("Where does winston live")
+print(result)
+result = chain.run(f"Describe {result}")
+print(result)
