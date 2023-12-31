@@ -2,12 +2,13 @@ import os
 import logging
 import dotenv
 import pinecone
-from langchain.chains import RetrievalQA
 from langchain.chat_models import ChatOpenAI
 from langchain.storage import LocalFileStore
+from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import TextLoader
 from langchain.vectorstores.pinecone import Pinecone
 from langchain.text_splitter import CharacterTextSplitter
+from langchain.schema.runnable import RunnablePassthrough
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
 
 llm = ChatOpenAI()
@@ -52,14 +53,24 @@ else:
     info(f"Vectorstore from existing index: {index_name}")
     vectorstore = Pinecone.from_existing_index(index_name, cahced_embeddings)
 
-
-chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    chain_type="map_rerank",  # "refine", "map_reduce", "map_rerank"
-    retriever=vectorstore.as_retriever(),  # interface
+retriever = vectorstore.as_retriever()
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Your are a helpful assistant. Answer questions using only the following cvontext. If you don't know the answer just say you don't know, don't make it up:\n\n{context}",
+        ),
+        ("human", "{question}"),
+    ]
+)
+chain = (
+    {
+        "context": retriever,
+        "question": RunnablePassthrough(),
+    }
+    | prompt
+    | llm
 )
 
-result = chain.run("Where does winston live")
-print(result)
-result = chain.run(f"Describe {result}")
+result = chain.invoke("Describe Victory Mansions")
 print(result)
