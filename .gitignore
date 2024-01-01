@@ -1,6 +1,7 @@
 .env
 *.db
 model.json
-mmd_files/
-diagram_files/
 files/
+.cache/
+diagram_files/
+mmd_files/

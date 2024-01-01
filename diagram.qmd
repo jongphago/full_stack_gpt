@@ -1,0 +1,95 @@
+---
+format:
+    gfm:
+        mermaid-format: png
+        theme: superhero
+---
+
+```{mermaid}
+    sequenceDiagram
+        autonumber
+
+        participant file_path
+        participant text_splitter
+        participant document_loaders
+        participant embeddings
+        participant vectorstores
+        participant schema.retriever
+        participant prompts
+        participant chat_models
+        participant Runnable
+
+        file_path -->>document_loaders: __init__
+        activate document_loaders
+        Note right of file_path: chapter_one.txt 
+        Note right of document_loaders: loader: BaseLoader
+        text_splitter ->> text_splitter: splitter: BaseDocumentTransformer
+        activate text_splitter
+        Note right of text_splitter: splitter: TextSplitter
+        text_splitter -->> document_loaders: load_and_split
+        deactivate text_splitter
+        embeddings ->> embeddings: embeddings: [BaseModel, Embeddings]
+        activate embeddings
+        Note right of embeddings: embeddings: [BaseModel, Embeddings]
+        par vectorstores.from_documents
+            document_loaders ->> vectorstores: docs
+            deactivate document_loaders
+            activate vectorstores
+            Note right of document_loaders: docs: List[Document]
+            embeddings ->> vectorstores: embeddings
+        end
+        deactivate embeddings
+        Note right of vectorstores: vectorstores: VectorStore
+        vectorstores -->> schema.retriever: as_retriever
+        deactivate vectorstores
+        activate schema.retriever
+        Note right of schema.retriever: retriever: VectorStoreRetriever
+        prompts -->> prompts: from_messages -> ChatPromptTemplate
+        activate prompts
+        chat_models -->> chat_models: llm: ChatOpenAI
+        activate chat_models
+        Runnable -->> Runnable: query: str
+        activate Runnable
+        par Runnable.invoke
+            Runnable -->> schema.retriever: query(context)
+            Runnable -->> prompts: query(question)
+        end
+        schema.retriever ->> prompts: context: Dict
+        deactivate schema.retriever
+        prompts ->> chat_models: PromptValue
+        deactivate prompts
+        Note right of chat_models: ChatMessage
+        deactivate chat_models
+        chat_models ->> Runnable: 
+        deactivate Runnable
+```
+
+```{mermaid}
+    sequenceDiagram
+        autonumber
+        participant map_doc_prompt
+        participant map_doc_chain
+        participant map_docs
+        participant retriever
+        participant map_chain
+        participant chain
+        participant final_prompt
+        participant llm
+        chain ->> final_prompt: query: question
+        chain ->> map_chain: query
+        map_chain ->> retriever: query
+        par
+            retriever ->> map_docs: documents
+            map_chain ->> map_docs: question
+        end
+        map_docs ->> map_doc_chain: Dict
+        loop
+            map_doc_chain ->> map_doc_prompt: document, question
+            map_doc_prompt ->> llm: Dict
+            llm ->> map_docs: result
+        end
+        map_docs ->> map_chain: results: str
+        map_chain ->> final_prompt: context
+        final_prompt ->> llm: Dict
+        llm ->> chain: result
+```
