@@ -8,13 +8,15 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import TextLoader
 from langchain.vectorstores.pinecone import Pinecone
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.schema.runnable import RunnablePassthrough
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 
 llm = ChatOpenAI()
 
 logger = logging.getLogger("rag")
 logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+logger.addHandler(handler)
 info, debug = logger.info, logger.debug
 
 splitter = CharacterTextSplitter.from_tiktoken_encoder(
@@ -54,21 +56,62 @@ else:
     vectorstore = Pinecone.from_existing_index(index_name, cahced_embeddings)
 
 retriever = vectorstore.as_retriever()
-prompt = ChatPromptTemplate.from_messages(
+
+map_doc_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "Your are a helpful assistant. Answer questions using only the following cvontext. If you don't know the answer just say you don't know, don't make it up:\n\n{context}",
+            """
+            Use the following portion of a long document to see if any of the text is relevant to answer the question. Return any relvant text verbatim
+            ------
+            {context}
+            """,
         ),
         ("human", "{question}"),
     ]
 )
+map_doc_chain = map_doc_prompt | llm
+
+
+def map_docs(inputs):
+    debug(f"map_docs:input:{inputs}")
+    documents = inputs["documents"]
+    question = inputs["question"]
+    return "\n\n".join(
+        map_doc_chain.invoke(
+            {"context": document.page_content, "question": question}
+        ).content
+        for document in documents
+    )
+
+
+map_chain = {
+    "documents": retriever,
+    "question": RunnablePassthrough(),
+} | RunnableLambda(map_docs)
+
+final_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+     Given the following  extracted parts of a long document and a question, create a final answer.
+     If you don't know the answer, just say that you don't know. 
+     Don't try to make up an answer.
+     -----
+     {context}
+     """,
+        ),
+        ("human", "{question}"),
+    ]
+)
+
 chain = (
     {
-        "context": retriever,
+        "context": map_chain,
         "question": RunnablePassthrough(),
     }
-    | prompt
+    | final_prompt
     | llm
 )
 

@@ -3,3 +3,5 @@
 model.json
 files/
 .cache/
+diagram_files
+mmd_files
