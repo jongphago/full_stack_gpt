@@ -72,18 +72,24 @@ format:
         participant map_docs
         participant retriever
         participant map_chain
+        participant chain
         participant final_prompt
         participant llm
-        participant chain
+        chain ->> final_prompt: query: question
         chain ->> map_chain: query
-        map_chain ->> retriever: documents
-        map_chain ->> map_docs: question
+        map_chain ->> retriever: query
+        par
+            retriever ->> map_docs: documents
+            map_chain ->> map_docs: question
+        end
         map_docs ->> map_doc_chain: Dict
-        map_doc_chain ->> map_doc_prompt: document, question
-        map_doc_prompt ->> llm: Dict
-        llm ->> map_docs: result
-        map_docs ->> final_prompt: results
-        chain ->> final_prompt: query
+        loop
+            map_doc_chain ->> map_doc_prompt: document, question
+            map_doc_prompt ->> llm: Dict
+            llm ->> map_docs: result
+        end
+        map_docs ->> map_chain: results: str
         map_chain ->> final_prompt: context
         final_prompt ->> llm: Dict
+        llm ->> chain: result
 ```
