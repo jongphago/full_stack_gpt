@@ -93,3 +93,67 @@ format:
         final_prompt ->> llm: Dict
         llm ->> chain: result
 ```
+
+```{mermaid}
+    sequenceDiagram
+        autonumber
+        
+        participant file_path
+        participant text_splitter
+        participant document_loaders
+        participant docs
+        participant embeddings
+        participant CacheBackedEmbeddings
+        participant pinecone
+        participant Pinecone
+        participant VectorStoreRetriever
+
+        par
+            file_path ->> document_loaders: "./chapter_one.txt": str
+            document_loaders -->> document_loaders: 
+        activate document_loaders
+        Note right of document_loaders: loader: TextLoader
+        end
+        text_splitter -->> text_splitter: from_tiktoken_encoder
+        activate text_splitter
+        Note right of text_splitter: splitter: CharacterTextSplitter
+        par
+            %% args
+            text_splitter ->> document_loaders: text_splitter=splitter 
+            deactivate text_splitter
+            %% method
+            document_loaders -->> docs: load_and_split
+            %% return
+            deactivate document_loaders
+            activate docs
+            Note right of docs: docs: List[str]
+        end
+        embeddings -->>+ embeddings: 
+        Note right of embeddings: embeddings: OpenAIEmbeddings
+        par
+            embeddings ->>- CacheBackedEmbeddings: underlying_embeddings=embeddings
+            CacheBackedEmbeddings -->>+ CacheBackedEmbeddings: from_bytes_store
+            Note right of CacheBackedEmbeddings: cahced_embeddings: CacheBackedEmbeddings
+        end
+        pinecone -->>+ pinecone: init
+        pinecone -->>- pinecone: create_index
+
+        alt Create new vectorstore
+            par
+                docs ->>+ Pinecone: documents=docs
+                deactivate docs
+                CacheBackedEmbeddings ->> Pinecone: embedding=cahced_embeddings
+                Pinecone -->>+ Pinecone: from_documents
+            end
+        else Vectorstore from existing index
+            par
+                CacheBackedEmbeddings ->>- Pinecone: embedding=cahced_embeddings
+                Pinecone -->> Pinecone: from_existing_index
+            end
+        end
+        Note right of Pinecone: vectorstore: Pinecone
+        Pinecone ->>- VectorStoreRetriever: as_retriever
+        Note right of VectorStoreRetriever: retriever: VectorStoreRetriever
+
+
+```
