@@ -5,6 +5,7 @@ format:
         theme: superhero
 ---
 
+## 6.8 Stuff LCEL Chain
 ```{mermaid}
     sequenceDiagram
         autonumber
@@ -64,6 +65,7 @@ format:
         deactivate Runnable
 ```
 
+## 6.9 Map Reduce LCEL Chain
 ```{mermaid}
     sequenceDiagram
         autonumber
@@ -94,6 +96,7 @@ format:
         llm ->> chain: result
 ```
 
+## 7.6 Uploading documents
 ```{mermaid}
     sequenceDiagram
         autonumber
@@ -156,4 +159,40 @@ format:
         Note right of VectorStoreRetriever: retriever: VectorStoreRetriever
 
 
+```
+
+## 7.8 Chain
+```{mermaid}
+sequenceDiagram
+    autonumber
+    participant Query
+    participant VectorStoreRetriever
+    participant RunnablePassthrough
+    participant RunnableLambda
+    participant ChatPromptTemplate
+    participant ChatOpenAI
+    participant Runnable
+
+    par Runnable.invoke
+        Note right of Query: message: str
+        Query -->>+ Runnable: message: str
+        Note right of Runnable: chain: Runnable
+        Runnable ->> Runnable: invoke
+        Runnable ->>+ RunnablePassthrough: message: str
+        Runnable ->>+ VectorStoreRetriever: message: str
+        Note right of VectorStoreRetriever: retriever: VectorStoreRetriever
+    end
+    par Prompt
+        VectorStoreRetriever ->>- RunnableLambda: List[str]
+        activate RunnableLambda
+        RunnableLambda ->>- ChatPromptTemplate: context
+        activate ChatPromptTemplate
+        RunnablePassthrough ->>- ChatPromptTemplate: question
+        Note right of ChatPromptTemplate: prompt: ChatPromptTemplate
+    end
+    ChatPromptTemplate ->>- ChatOpenAI: PromptValue
+    activate ChatOpenAI
+    Note right of ChatOpenAI: llm: ChatOpenAI
+    ChatOpenAI ->>- Runnable: response: str
+    deactivate Runnable
 ```

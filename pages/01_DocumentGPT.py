@@ -5,10 +5,13 @@ import dotenv
 import pinecone
 import streamlit as st
 from langchain.storage import LocalFileStore
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
 from langchain.document_loaders import TextLoader
 from langchain.vectorstores.pinecone import Pinecone
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
+from langchain.schema.runnable import RunnablePassthrough, RunnableLambda
 
 # Evironment variable
 dotenv.load_dotenv(dotenv.find_dotenv("../.env"))
@@ -70,14 +73,34 @@ def send_message(message, role, save=True):
         )
 
 
-def paint_history(): 
+def paint_history():
     for message in st.session_state["message"]:
         send_message(
             message["message"],
             message["role"],
-            save=False, 
+            save=False,
         )
 
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            """
+            Answer the question using ONLY the following context. If you don't know the answer just say you don't know. DON'T make anything up
+
+            Context: {context}
+            """,
+        ),
+        ("human", "{question}"),
+    ]
+)
+
+llm = ChatOpenAI(temperature=0.1)
 
 st.set_page_config(
     page_title="DocumentGPT",
@@ -108,7 +131,16 @@ if file:
     if message:
         send_message(message, "human")
         time.sleep(1)
-        send_message(message, "AI")
-        
+        chain = (
+            {
+                "context": retriever | RunnableLambda(format_docs),
+                "question": RunnablePassthrough(),
+            }
+            | prompt
+            | llm
+        )
+        response = chain.invoke(message)
+        send_message(response.content, "AI")
+
 else:
     st.session_state["message"] = []
