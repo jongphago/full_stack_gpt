@@ -10,25 +10,15 @@ from langchain.vectorstores.pinecone import Pinecone
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, CacheBackedEmbeddings
 
-# Logging
-logger = logging.getLogger("fgpt.documentgpt")
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-handler = logging.StreamHandler()
-logger.addHandler(handler)
-logger.handlers[0].setFormatter(formatter)
-info, debug = logger.info, logger.debug
-
 # Evironment variable
 dotenv.load_dotenv(dotenv.find_dotenv("../.env"))
 
 
 # Function: Embed file
+@st.cache_resource(show_spinner="Embedding file...")
 def embed_file(file):
     file_content = file.read()
     file_path = f"./.cache/files/{file.name}"
-    st.write(file_content)
-    st.write(file_path)
     with open(file_path, "wb") as f:
         f.write(file_content)
 
@@ -43,8 +33,6 @@ def embed_file(file):
     embeddings = OpenAIEmbeddings()
     cache_dir = LocalFileStore(f".cache/embeddings/{file.name}")
     cahced_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
-    debug(len(embeddings.embed_query("Hello")))
-
 
     # Pinecone
     pinecone.init(
@@ -55,19 +43,40 @@ def embed_file(file):
     index_name = "open-ai"
     if index_name not in pinecone.list_indexes():
         # we create a new index
-        info(f"Create new vector store: {index_name}")
         pinecone.create_index(name=index_name, metric="cosine", dimension=1536)
         vectorstore = Pinecone.from_documents(
             docs, cahced_embeddings, index_name=index_name
         )
 
     else:
-        info(f"Vectorstore from existing index: {index_name}")
         vectorstore = Pinecone.from_existing_index(index_name, cahced_embeddings)
 
     retriever = vectorstore.as_retriever()
 
     return retriever
+
+
+def send_message(message, role, save=True):
+    with st.chat_message(role):
+        st.markdown(message)
+    if "message" not in st.session_state:
+        st.session_state["message"] = []
+    if save:
+        st.session_state["message"].append(
+            {
+                "message": message,
+                "role": role,
+            }
+        )
+
+
+def paint_history(): 
+    for message in st.session_state["message"]:
+        send_message(
+            message["message"],
+            message["role"],
+            save=False, 
+        )
 
 
 st.set_page_config(
@@ -84,14 +93,22 @@ Welcome!
 Use this chatbot to ask questions to an AI about your files!
 """
 )
-
-file = st.file_uploader(
-    "Upload a .txt file",
-    type=["txt"],
-)
+with st.sidebar:
+    file = st.file_uploader(
+        "Upload a .txt file",
+        type=["txt"],
+    )
 
 if file:
-    st.write(file)
     retriever = embed_file(file)
-    docs = retriever.invoke("ministry of truth")
-    st.write(docs)
+    message = st.chat_input("")
+    send_message("I'm ready! Ask away", "AI", save=False)
+    paint_history()
+    message = st.chat_input("Ask anything about your file...")
+    if message:
+        send_message(message, "human")
+        time.sleep(1)
+        send_message(message, "AI")
+        
+else:
+    st.session_state["message"] = []
